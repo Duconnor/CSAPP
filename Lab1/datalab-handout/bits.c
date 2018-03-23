@@ -332,9 +332,34 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-	unsigned int sign = x & 0x80000000;
-	unsigned int body = x & 0x7FFFFFFF;
-	body = body >> 8;
+	unsigned int sign = x & 0x80000000; // get the sign of x
+	if (x == 0)
+		return 0;
+	if (x < 0)
+		x = -x; // convert negative x into their positive counterpart
+	
+	unsigned int flag = 0; // flag used to indicate the first bit of x at present
+	unsigned int count = 0; // count used to indicate how many bits have we shift to left now
+	while (!flag)
+	{
+		flag = x & 0x80000000;
+		x <<= 1;
+		count += 1;
+	}
+	// after the loop, x is now the primary fractional part (without the leading one)
+	
+	// decide whether the precision is not enough
+	unsigned int round = 0;
+	unsigned int mask = ~(0xFFFFFFFF << 23);
+	unsigned int frac = x & 0x01FF; // frac indicate the missing precision
+	unsigned int fracPart = (x >> 9) & mask;
+	if(frac > 0x0100)
+		round = 1;
+	else if (frac == 0x0100)
+		if (fracPart % 2)
+			// if the missing precision is just in the middle, then we round fracPart by one (to the nearest even)
+			round = 1;  
+	return (sign + (fracPart + round) + ((159 - count) << 23));
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
