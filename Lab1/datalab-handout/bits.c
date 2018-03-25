@@ -373,33 +373,15 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-	unsigned int exponent = (0xFF & (uf >> 23)); // the exponent part
-	unsigned int significant = 0x007FFFFF & uf; // the significant part
-	unsigned int sign = 0x80000000 & uf;
-	if (exponent == 0x7F800000) // special value
+	if ((uf & 0x7F800000) == 0x7F800000)
+		// special value case
 		return uf;
-	if (exponent == 0) // denormalized form
-		significant += 0x00800000;
-	significant += significant;
-	if (((significant >> 24) & 1) == 1) // M is equal or larger than 2
-	{
-		significant = significant >> 1;
-		exponent += 1;
-	}
-	if (((significant >> 23) & 1) == 0)
-	{
-		int count = 1;
-		significant = significant << 1;
-		while (((significant >> 23) & 1) == 0)
-		{
-			significant = significant << 1;
-			count += 1;
-		}
-		exponent -= count;
-	}
-	exponent = exponent << 23;
-	unsigned int result = sign + significant + exponent;
-	return result;
+	if ((uf & 0x7F800000) == 0x00000000)
+		return (((uf & 0x007FFFFF) << 1) + (uf & 0x80000000));
+	
+	// other are normalized value case
+	unsigned fracPart = (uf & 0x007FFFFF + 0x00800000);
+	fracPart += fracPart;
+	fracPart = (fracPart >> 1) & 0x007FFFFF;
+	return (uf & 0xFF800000) + 0x00800000 + fracPart;
 }
-
-// gcc -O -o btest btest.c bits.c decl.c tests.c
